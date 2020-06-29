@@ -12,6 +12,8 @@ RUN rm alarm-server.zip
 RUN curl -OL https://controlssoftware.sns.ornl.gov/css_phoebus/nightly/alarm-logger.zip
 RUN unzip alarm-logger.zip
 RUN rm alarm-logger.zip
+RUN curl -OL https://raw.githubusercontent.com/ControlSystemStudio/phoebus/master/services/alarm-logger/startup/create_alarm_index.sh
+RUN curl -OL https://raw.githubusercontent.com/ControlSystemStudio/phoebus/master/services/alarm-logger/startup/create_alarm_template.sh
 
 
 # =================================
@@ -29,8 +31,13 @@ CMD ["-list"]
 # Final build target "alarm-logger"
 # =================================
 FROM openjdk:16-slim-buster as alarm-logger
+RUN apt-get update && apt-get install -yqq curl && rm -rf /var/cache/*
 COPY --from=download-extract /var/cache/alarm-logger-4.6.3/service-alarm-logger-4.6.3.jar /alarm-logger/service-alarm-logger-4.6.3.jar
 COPY --from=download-extract /var/cache/alarm-logger-4.6.3/lib /alarm-logger/lib
+COPY --from=download-extract /var/cache/create_alarm_index.sh /alarm-logger
+COPY --from=download-extract /var/cache/create_alarm_template.sh /alarm-logger
 WORKDIR /alarm-logger
+RUN chmod u+x create_alarm_index.sh create_alarm_template.sh
+RUN sed -e'/^es_host=/d' -e'/^es_port=/d' -i create_alarm_index.sh create_alarm_template.sh
 ENTRYPOINT ["java", "-jar", "/alarm-logger/service-alarm-logger-4.6.3.jar"]
 CMD ["-list"]
